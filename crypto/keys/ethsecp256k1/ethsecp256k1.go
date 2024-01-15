@@ -71,8 +71,8 @@ func (privKey PrivKey) PubKey() cryptotypes.PubKey {
 }
 
 // Equals returns true if two ECDSA private keys are equal and false otherwise.
-func (privkey PrivKey) Equals(other cryptotypes.LedgerPrivKey) bool {
-	return bytes.Equal(privkey.Bytes(), other.Bytes())
+func (privKey PrivKey) Equals(other cryptotypes.LedgerPrivKey) bool {
+	return bytes.Equal(privKey.Bytes(), other.Bytes())
 }
 
 // Type implements crypto.PrivKey.
@@ -110,14 +110,14 @@ func (privKey *PrivKey) UnmarshalAminoJSON(bz []byte) error {
 // Sign creates a recoverable ECDSA signature on the secp256k1 curve over the
 // Keccak256 hash of the provided message. The produced signature is 65 bytes
 // where the last byte contains the recovery ID.
-func (privkey PrivKey) Sign(msg []byte) ([]byte, error) {
-	return ethcrypto.Sign(ethcrypto.Keccak256Hash(msg).Bytes(), privkey.ToECDSA())
+func (privKey PrivKey) Sign(msg []byte) ([]byte, error) {
+	return ethcrypto.Sign(ethcrypto.Keccak256Hash(msg).Bytes(), privKey.ToECDSA())
 }
 
 // ToECDSA returns the ECDSA private key as a reference to ecdsa.PrivateKey type.
 // The function will panic if the private key is invalid.
-func (privkey PrivKey) ToECDSA() *ecdsa.PrivateKey {
-	key, err := ethcrypto.ToECDSA(privkey.Key)
+func (privKey PrivKey) ToECDSA() *ecdsa.PrivateKey {
+	key, err := ethcrypto.ToECDSA(privKey.Key)
 	if err != nil {
 		panic(err)
 	}
@@ -134,8 +134,8 @@ var (
 
 // Address returns the address of the ECDSA public key.
 // The function will panic if the public key is invalid.
-func (key *PubKey) Address() cryptotypes.Address {
-	pubk, err := ethcrypto.DecompressPubkey(key.Key)
+func (pubKey *PubKey) Address() cryptotypes.Address {
+	pubk, err := ethcrypto.DecompressPubkey(pubKey.Key)
 	if err != nil {
 		panic(err)
 	}
@@ -145,9 +145,9 @@ func (key *PubKey) Address() cryptotypes.Address {
 
 // Bytes returns the raw bytes of the ECDSA public key.
 // The function panics if the key cannot be marshaled to bytes.
-func (key *PubKey) Bytes() []byte {
-	bz := make([]byte, len(key.Key))
-	copy(bz, key.Key)
+func (pubKey *PubKey) Bytes() []byte {
+	bz := make([]byte, len(pubKey.Key))
+	copy(bz, pubKey.Key)
 
 	return bz
 	// bz, err := CryptoCodec.MarshalBinaryBare(key)
@@ -197,19 +197,19 @@ func (*PubKey) Type() string {
 }
 
 // Equals returns true if two ECDSA public keys are equal and false otherwise.
-func (key *PubKey) Equals(other cryptotypes.PubKey) bool {
-	return bytes.Equal(key.Bytes(), other.Bytes())
+func (pubKey *PubKey) Equals(other cryptotypes.PubKey) bool {
+	return bytes.Equal(pubKey.Bytes(), other.Bytes())
 }
 
 // VerifyBytes verifies that the ECDSA public key created a given signature over
 // the provided message. It will calculate the Keccak256 hash of the message
 // prior to verification.
-func (key *PubKey) VerifySignature(msg []byte, sig []byte) bool {
+func (pubKey *PubKey) VerifySignature(msg []byte, sig []byte) bool {
 	if len(sig) == 65 {
 		// remove recovery ID if contained in the signature
 		sig = sig[:len(sig)-1]
 	}
 
 	// the signature needs to be in [R || S] format when provided to VerifySignature
-	return secp256k1.VerifySignature(key.Bytes(), ethcrypto.Keccak256Hash(msg).Bytes(), sig)
+	return secp256k1.VerifySignature(pubKey.Bytes(), ethcrypto.Keccak256Hash(msg).Bytes(), sig)
 }
