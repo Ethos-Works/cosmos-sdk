@@ -23,6 +23,7 @@ type Config struct {
 	// SLIP-44 related
 	purpose  uint32
 	coinType uint32
+	keyAlgo  string
 
 	sealed   bool
 	sealedch chan struct{}
@@ -50,6 +51,7 @@ func NewConfig() *Config {
 
 		purpose:   Purpose,
 		coinType:  CoinType,
+		keyAlgo:   KeySigningAlgo,
 		txEncoder: nil,
 	}
 }
@@ -140,6 +142,12 @@ func (config *Config) SetCoinType(coinType uint32) {
 	config.coinType = coinType
 }
 
+// Set the Key Signing Algorithm on the config
+func (config *Config) SetKeySingingAlgo(keyAlgo string) {
+	config.assertNotSealed()
+	config.keyAlgo = keyAlgo
+}
+
 // Seal seals the config such that the config state could not be modified further
 func (config *Config) Seal() *Config {
 	config.mtx.Lock()
@@ -205,6 +213,11 @@ func (config *Config) GetPurpose() uint32 {
 // GetCoinType returns the BIP-0044 CoinType code on the config.
 func (config *Config) GetCoinType() uint32 {
 	return config.coinType
+}
+
+// GetKeySigningAlgo returns the Key Signing Algorithm on the config.
+func (config *Config) GetKeySigningAlgo() string {
+	return config.keyAlgo
 }
 
 // GetFullFundraiserPath returns the BIP44Prefix.
