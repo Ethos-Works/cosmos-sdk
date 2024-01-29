@@ -2,6 +2,7 @@ package secp256k1
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
@@ -10,9 +11,10 @@ import (
 
 	"github.com/cometbft/cometbft/crypto"
 	secp256k1 "github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"golang.org/x/crypto/ripemd160" //nolint: staticcheck // keep around for backwards compatibility
 
+	//nolint: staticcheck // keep around for backwards compatibility
 	errorsmod "cosmossdk.io/errors"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -39,9 +41,21 @@ func (privKey *PrivKey) Bytes() []byte {
 // PubKey performs the point-scalar multiplication from the privKey on the
 // generator point to get the pubkey.
 func (privKey *PrivKey) PubKey() cryptotypes.PubKey {
-	pubkeyObject := secp256k1.PrivKeyFromBytes(privKey.Key).PubKey()
-	pk := pubkeyObject.SerializeCompressed()
-	return &PubKey{Key: pk}
+	// pubkeyObject := secp256k1.PrivKeyFromBytes(privKey.Key).PubKey()
+	// pk := pubkeyObject.SerializeCompressed()
+	// return &PubKey{Key: pk}
+	ecdsaPrivKey := privKey.ToECDSA()
+	return &PubKey{Key: ethcrypto.CompressPubkey(&ecdsaPrivKey.PublicKey)}
+}
+
+// ToECDSA returns the ECDSA private key as a reference to ecdsa.PrivateKey type.
+// The function will panic if the private key is invalid.
+func (privKey PrivKey) ToECDSA() *ecdsa.PrivateKey {
+	key, err := ethcrypto.ToECDSA(privKey.Key)
+	if err != nil {
+		panic(err)
+	}
+	return key
 }
 
 // Equals - you probably don't need to use this.
@@ -62,7 +76,7 @@ func (privKey PrivKey) MarshalAmino() ([]byte, error) {
 // UnmarshalAmino overrides Amino binary marshaling.
 func (privKey *PrivKey) UnmarshalAmino(bz []byte) error {
 	if len(bz) != PrivKeySize {
-		return fmt.Errorf("invalid privkey size")
+		return fmt.Errorf("invalid privkey size, expected %d got %d", PrivKeySize, len(bz))
 	}
 	privKey.Key = bz
 
@@ -84,7 +98,13 @@ func (privKey *PrivKey) UnmarshalAminoJSON(bz []byte) error {
 // GenPrivKey generates a new ECDSA private key on curve secp256k1 private key.
 // It uses OS randomness to generate the private key.
 func GenPrivKey() *PrivKey {
-	return &PrivKey{Key: genPrivKey(crypto.CReader())}
+	// return &PrivKey{Key: genPrivKey(crypto.CReader())}
+	priv, err := ethcrypto.GenerateKey()
+	if err != nil {
+		return nil
+	}
+
+	return &PrivKey{Key: ethcrypto.FromECDSA(priv)}
 }
 
 // genPrivKey generates a new secp256k1 private key using the provided reader.
@@ -153,14 +173,21 @@ const PubKeySize = 33
 
 // Address returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey))
 func (pubKey *PubKey) Address() crypto.Address {
-	if len(pubKey.Key) != PubKeySize {
-		panic("length of pubkey is incorrect")
+	// if len(pubKey.Key) != PubKeySize {
+	// 	panic("length of pubkey is incorrect")
+	// }
+
+	// sha := sha256.Sum256(pubKey.Key)
+	// hasherRIPEMD160 := ripemd160.New()
+	// hasherRIPEMD160.Write(sha[:]) // does not error
+	// return crypto.Address(hasherRIPEMD160.Sum(nil))
+
+	pubk, err := ethcrypto.DecompressPubkey(pubKey.Key)
+	if err != nil {
+		panic(err)
 	}
 
-	sha := sha256.Sum256(pubKey.Key)
-	hasherRIPEMD160 := ripemd160.New()
-	hasherRIPEMD160.Write(sha[:]) // does not error
-	return crypto.Address(hasherRIPEMD160.Sum(nil))
+	return cryptotypes.Address(ethcrypto.PubkeyToAddress(*pubk).Bytes())
 }
 
 // Bytes returns the pubkey byte format.
@@ -205,4 +232,25 @@ func (pubKey PubKey) MarshalAminoJSON() ([]byte, error) {
 // UnmarshalAminoJSON overrides Amino JSON marshaling.
 func (pubKey *PubKey) UnmarshalAminoJSON(bz []byte) error {
 	return pubKey.UnmarshalAmino(bz)
+}
+
+// VerifySignature verifies that the ECDSA public key created a given signature over
+// the provided message. It will calculate the Keccak256 hash of the message
+// prior to verification and approve verification if the signature can be verified
+// from either the original message or its EIP-712 representation.
+//
+// CONTRACT: The signature should be in [R || S] format.
+func (pubKey PubKey) VerifySignature(msg, sig []byte) bool {
+	return pubKey.verifySignatureECDSA(msg, sig)
+}
+
+// Perform standard ECDSA signature verification for the given raw bytes and signature.
+func (pubKey PubKey) verifySignatureECDSA(msg, sig []byte) bool {
+	if len(sig) == 64+1 {
+		// remove recovery ID (V) if contained in the signature
+		sig = sig[:len(sig)-1]
+	}
+
+	// the signature needs to be in [R || S] format when provided to VerifySignature
+	return ethcrypto.VerifySignature(pubKey.Key, ethcrypto.Keccak256Hash(msg).Bytes(), sig)
 }

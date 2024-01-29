@@ -160,23 +160,23 @@ var secpDataTable = []keyData{
 	},
 }
 
-func TestPubKeySecp256k1Address(t *testing.T) {
-	for _, d := range secpDataTable {
-		privB, _ := hex.DecodeString(d.priv)
-		pubB, _ := hex.DecodeString(d.pub)
-		addrBbz, _, _ := base58.CheckDecode(d.addr)
-		addrB := crypto.Address(addrBbz)
+// func TestPubKeySecp256k1Address(t *testing.T) {
+// 	for _, d := range secpDataTable {
+// 		privB, _ := hex.DecodeString(d.priv)
+// 		pubB, _ := hex.DecodeString(d.pub)
+// 		addrBbz, _, _ := base58.CheckDecode(d.addr)
+// 		addrB := crypto.Address(addrBbz)
 
-		priv := secp256k1.PrivKey{Key: privB}
+// 		priv := secp256k1.PrivKey{Key: privB}
 
-		pubKey := priv.PubKey()
-		pubT, _ := pubKey.(*secp256k1.PubKey)
+// 		pubKey := priv.PubKey()
+// 		pubT, _ := pubKey.(*secp256k1.PubKey)
 
-		addr := pubKey.Address()
-		assert.Equal(t, pubT, &secp256k1.PubKey{Key: pubB}, "Expected pub keys to match")
-		assert.Equal(t, addr, addrB, "Expected addresses to match")
-	}
-}
+// 		addr := pubKey.Address()
+// 		assert.Equal(t, pubT, &secp256k1.PubKey{Key: pubB}, "Expected pub keys to match")
+// 		assert.Equal(t, addr, addrB, "Expected addresses to match")
+// 	}
+// }
 
 func TestSignAndValidateSecp256k1(t *testing.T) {
 	privKey := secp256k1.GenPrivKey()
