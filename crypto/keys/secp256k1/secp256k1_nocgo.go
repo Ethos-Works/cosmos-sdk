@@ -23,21 +23,21 @@ func (privKey *PrivKey) Sign(msg []byte) ([]byte, error) {
 
 // VerifyBytes verifies a signature of the form R || S.
 // It rejects signatures which are not in lower-S form.
-// func (pubKey *PubKey) VerifySignature(msg, sigStr []byte) bool {
-// 	if len(sigStr) != 64 {
-// 		return false
-// 	}
-// 	pub, err := secp256k1.ParsePubKey(pubKey.Key)
-// 	if err != nil {
-// 		return false
-// 	}
-// 	// parse the signature, will return error if it is not in lower-S form
-// 	signature, err := signatureFromBytes(sigStr)
-// 	if err != nil {
-// 		return false
-// 	}
-// 	return signature.Verify(crypto.Sha256(msg), pub)
-// }
+func (pubKey *PubKey) VerifySignature(msg, sigStr []byte) bool {
+	if len(sigStr) != 64 {
+		return false
+	}
+	pub, err := secp256k1.ParsePubKey(pubKey.Key)
+	if err != nil {
+		return false
+	}
+	// parse the signature, will return error if it is not in lower-S form
+	signature, err := signatureFromBytes(sigStr)
+	if err != nil {
+		return false
+	}
+	return signature.Verify(crypto.Sha256(msg), pub)
+}
 
 // Read Signature struct from R || S. Caller needs to ensure
 // that len(sigStr) == 64.
